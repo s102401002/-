@@ -21,68 +21,79 @@ private:
     int nodeNum;
     int edgeNum;
     int target;
-    vector<bool> convert(Cycle c)
-    {
-        vector<vector<bool>> v(this->nodeNum, vector<bool>(this->nodeNum, 0));
-        int n = c.order.size();
-        for (int i = 0; i < n; i++)
-        {
-            v[c.order[i]][c.order[(i + 1) % n]] = true;
-            v[c.order[(i + 1) % n]][c.order[i]] = true;
-        }
-        vector<bool> re;
-        for (int i = 0; i < v.size(); ++i)
-        {
-            for (int j = 0; j < v[0].size(); ++j)
-            {
-                re.push_back(v[i][j]);
-            }
-        }
-
-        return re;
-    }
-
     bool can_be_added(vector<Cycle> &currBasis, Cycle candidate)
     {
         if (currBasis.empty())
         {
             return true;
         }
-        int n = currBasis.size();
-        vector<bool> target = convert(candidate);
-        vector<vector<bool>> basis(n);
+        vector<int> candidateCycle(this->nodeNum * this->nodeNum, 0);
+        int n = candidate.order.size();
         for (int i = 0; i < n; i++)
         {
-            basis[i] = convert(currBasis[i]);
+            int from = candidate.order[i];
+            int to = candidate.order[(i + 1) % n];
+            candidateCycle[from * this->nodeNum + to] = 1;
+            candidateCycle[to * this->nodeNum + from] = 1;
         }
-        vector<bool> current = target;
-        for (const auto &b : basis)
+        // cout << candidateCycle.size() << endl;
+        //  將現有循環轉換為矩陣
+        vector<vector<int>> basisMatrix;
+        for (const auto &cycle : currBasis)
         {
-            for (int j = 0; j < current.size(); j++)
+            vector<int> baseCycle(this->nodeNum * this->nodeNum, 0);
+            int m = cycle.order.size();
+            for (int i = 0; i < m; i++)
             {
-                current[j] = current[j] ^ b[j];
+                int from = cycle.order[i];
+                int to = cycle.order[(i + 1) % m];
+                baseCycle[from * this->nodeNum + to] = 1;
+                baseCycle[to * this->nodeNum + from] = 1;
             }
-            bool flag = true;
-            for (bool val : current)
+            basisMatrix.push_back(baseCycle);
+        }
+        // cout << "Candidite";
+        // for (int i = 0; i < candidateCycle.size(); i++)
+        // {
+        //     cout << ", " << candidateCycle[i];
+        // }
+        // cout << endl;
+        // cout << "Basis";
+        // for (const auto &basis : basisMatrix)
+        // {
+        //     for (int i = 0; i < basis.size(); i++)
+        //     {
+        //         cout << ", " << basis[i];
+        //     }
+        //     cout << endl;
+        // }
+        // 用高斯消去法判斷線性無關性
+        vector<int> temp = candidateCycle;
+        for (const auto &basis : basisMatrix)
+        {
+            // 對每個基本循環進行XOR
+            for (int i = 0; i < temp.size(); i++)
             {
-                if (val)
+                temp[i] ^= basis[i];
+            }
+
+            bool isZero = true;
+            for (int val : temp)
+            {
+                if (val != 0)
                 {
-                    flag = false;
+                    isZero = false;
                     break;
                 }
             }
-            if (flag)
+            if (isZero)
             {
-                return true;
+                cout << "drop\n";
+                return false;
             }
         }
-        for (bool val : current)
-        {
-            if (val)
-                return true;
-        }
-        // cout << "drop\n";
-        return false;
+
+        return true;
     }
 
 public:
@@ -97,6 +108,9 @@ public:
 
         for (const Cycle &cycle : allCycle)
         {
+            //
+            // target = 3;
+            // test
             if (basis.size() == target)
             {
                 break;
@@ -254,16 +268,18 @@ int main()
     vector<Cycle> minCycleBasis = solver.solve(allCycle, nodenum, edgenum);
 
     // Output the minimum cycle basis
-
+    int totalCost = 0;
     for (const auto &cycle : minCycleBasis)
     {
         cout << "Cycle Weight: " << cycle.weight << ", Nodes: ";
+        totalCost += cycle.weight;
         for (int node : cycle.order)
             cout << node << " ";
         cout << endl;
     }
     cout << "All Cycle Number: " << allCycle.size() << endl;
     cout << "Node Number:" << nodenum << ", Edge Number:" << edgenum << endl;
+    cout << "Minimum Cycle Basis Cost: " << totalCost << endl;
     cout << "Minimum Cycle Basis Size: " << minCycleBasis.size() << endl;
     return 0;
 }
