@@ -20,38 +20,69 @@ class Solve
 private:
     int nodeNum;
     int edgeNum;
-    bool can_be_merged(vector<Cycle> currBasis, Cycle candidate)
-    {
-        int n = currBasis.size();
-        if (currBasis.size() <= 1)
-        {
-            return true;
-        }
-        vector<bool> target = convert(candidate);
-        vector<vector<bool>> curr(n);
-        for (int i = 0; i < n; i++)
-        {
-            curr[i] = convert(currBasis[i]);
-        }
-    }
+    int target;
     vector<bool> convert(Cycle c)
     {
+        vector<vector<bool>> v(this->nodeNum, vector<bool>(this->nodeNum, 0));
         int n = c.order.size();
-        vector<vector<bool>> v(this->edgeNum, vector<bool>(this->edgeNum, 0));
-        for (int i = 0; i < n - 1; i++)
+        for (int i = 0; i < n; i++)
         {
-            v[c.order[i]][c.order[i + 1]] = true;
-            v[c.order[i + 1]][c.order[i]] = true;
+            v[c.order[i]][c.order[(i + 1) % n]] = true;
+            v[c.order[(i + 1) % n]][c.order[i]] = true;
         }
-        v[c.order[0]][c.order[n - 1]] = true;
-        v[c.order[n - 1]][c.order[0]] = true;
         vector<bool> re;
         for (int i = 0; i < v.size(); ++i)
         {
             for (int j = 0; j < v[0].size(); ++j)
+            {
                 re.push_back(v[i][j]);
+            }
         }
+
         return re;
+    }
+
+    bool can_be_added(vector<Cycle> &currBasis, Cycle candidate)
+    {
+        if (currBasis.empty())
+        {
+            return true;
+        }
+        int n = currBasis.size();
+        vector<bool> target = convert(candidate);
+        vector<vector<bool>> basis(n);
+        for (int i = 0; i < n; i++)
+        {
+            basis[i] = convert(currBasis[i]);
+        }
+        vector<bool> current = target;
+        for (const auto &b : basis)
+        {
+            for (int j = 0; j < current.size(); j++)
+            {
+                current[j] = current[j] ^ b[j];
+            }
+            bool flag = true;
+            for (bool val : current)
+            {
+                if (val)
+                {
+                    flag = false;
+                    break;
+                }
+            }
+            if (flag)
+            {
+                return true;
+            }
+        }
+        for (bool val : current)
+        {
+            if (val)
+                return true;
+        }
+        // cout << "drop\n";
+        return false;
     }
 
 public:
@@ -59,8 +90,24 @@ public:
     {
         this->nodeNum = nodeNum;
         this->edgeNum = edgeNum;
+        this->target = (edgeNum - nodeNum + 1);
+
         vector<Cycle> basis;
-        sort(allCycle.begin(), allCycle.end());
+        stable_sort(allCycle.begin(), allCycle.end());
+
+        for (const Cycle &cycle : allCycle)
+        {
+            if (basis.size() == target)
+            {
+                break;
+            }
+            if (can_be_added(basis, cycle))
+            {
+                basis.push_back(cycle);
+            }
+        }
+
+        return basis;
     }
 };
 
@@ -202,5 +249,21 @@ int main()
         }
         e = e + adde;
     }
-    cout << allCycle.size();
+    // cout << allCycle.size();
+    Solve solver;
+    vector<Cycle> minCycleBasis = solver.solve(allCycle, nodenum, edgenum);
+
+    // Output the minimum cycle basis
+
+    for (const auto &cycle : minCycleBasis)
+    {
+        cout << "Cycle Weight: " << cycle.weight << ", Nodes: ";
+        for (int node : cycle.order)
+            cout << node << " ";
+        cout << endl;
+    }
+    cout << "All Cycle Number: " << allCycle.size() << endl;
+    cout << "Node Number:" << nodenum << ", Edge Number:" << edgenum << endl;
+    cout << "Minimum Cycle Basis Size: " << minCycleBasis.size() << endl;
+    return 0;
 }
